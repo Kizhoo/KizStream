@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 
 // Kita ganti target ke Otakudesu yang jauh lebih ramah server/scraper
-const BASE_URL = 'https://otakudesu.cloud';
+const BASE_URL = 'https://otakudesu.blog';
 
 const getHeaders = () => ({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
