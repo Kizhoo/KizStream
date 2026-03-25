@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nimestream-v1';
+const CACHE_NAME = 'nimestream-v2'; // <--- NAIK VERSI UNTUK MENGHANCURKAN CACHE LAMA
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -7,17 +7,16 @@ const ASSETS_TO_CACHE = [
     'https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap'
 ];
 
-// Install Service Worker
 self.addEventListener('install', (event) => {
+    self.skipWaiting(); // Paksa browser langsung menggunakan Service Worker versi baru ini
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS_TO_CACHE);
-        })
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
     );
 });
 
-// Activate Service Worker
 self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+    // Sistem pembersih: Hapus semua cache versi sebelumnya yang menyebabkan Error / Layar Hitam
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
@@ -31,18 +30,8 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch Strategy: Network First (Agar data API selalu update), fallback ke Cache jika offline
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                // Jika request sukses, clone responnya ke cache (opsional untuk aset statis)
-                // Tapi untuk NimeStream kita biarkan browser handle cache standar
-                return response;
-            })
-            .catch(() => {
-                // Jika offline, coba ambil dari cache
-                return caches.match(event.request);
-            })
+        fetch(event.request).catch(() => caches.match(event.request))
     );
 });
