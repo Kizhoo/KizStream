@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 
 // --- KONFIGURASI ---
-const BASE_URL = 'https://otakudesu.cloud';
+const BASE_URL = 'https://otakudesu.blog';
 // Menggunakan AllOrigins Proxy untuk menyembunyikan IP Vercel dari sistem anti-bot Otakudesu
 const PROXY = 'https://api.allorigins.win/raw?url=';
 
