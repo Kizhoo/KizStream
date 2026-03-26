@@ -19,8 +19,8 @@
     // GANTI dengan Firebase config kamu:
     // Firebase Console -> Project Settings -> Your Apps -> Config
     // =====================================================
-    const FC = { apiKey:"YOUR_API_KEY", authDomain:"YOUR.firebaseapp.com", databaseURL:"https://YOUR-rtdb.firebaseio.com", projectId:"YOUR_PROJECT", storageBucket:"YOUR.appspot.com", messagingSenderId:"000", appId:"1:000:web:000" };
-    window.FIREBASE_READY = FC.apiKey !== "YOUR_API_KEY";
+    const FC = { apiKey:"AIzaSyBvgLgGEGw-72OexZ6P0vPaxXCuRxFEpyo", authDomain:"kizstream.firebaseapp.com", databaseURL:"https://kizstream-default-rtdb.asia-southeast1.firebasedatabase.app/", projectId:"kizstream", storageBucket:"YOUR.appspot.com", messagingSenderId:"450525930145", appId:"1:450525930145:web:b53c2eeb6ce77867ea06e0" };
+    window.FIREBASE_READY = FC.apiKey !== "AIzaSyBvgLgGEGw-72OexZ6P0vPaxXCuRxFEpyo";
     if (window.FIREBASE_READY) {
       const app = initializeApp(FC);
       const auth = getAuth(app); const db = getDatabase(app); const gp = new GoogleAuthProvider();
