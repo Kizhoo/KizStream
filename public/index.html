@@ -5,24 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="NimeStream — Nonton Anime HD Sub Indo Gratis">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>NimeStream — Nonton Anime HD</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Google AdSense — ganti pub-ID milikmu & uncomment -->
+  <!-- Google AdSense: uncomment & ganti pub-ID milikmu -->
   <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
 </head>
 <body>
+
+<!-- ── OFFLINE INDICATOR ───────────────────────────────────── -->
+<div id="offline-bar" class="offline-bar hidden">
+  📴 Tidak ada koneksi internet
+</div>
+
+<!-- ── PWA INSTALL BANNER ─────────────────────────────────── -->
+<div id="pwa-banner" class="pwa-banner hidden">
+  <span>📱 Install NimeStream sebagai aplikasi!</span>
+  <div>
+    <button class="pwa-install-btn" onclick="installPWA()">Install</button>
+    <button class="pwa-dismiss-btn" onclick="document.getElementById('pwa-banner').classList.add('hidden')">✕</button>
+  </div>
+</div>
+
+<!-- ── NAVBAR ──────────────────────────────────────────────── -->
 <nav class="navbar" id="navbar">
   <span class="app-logo">⚡ NimeStream</span>
   <div class="nav-actions">
-    <button class="icon-btn" onclick="toggleSearch()" title="Cari"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
-    <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Tema"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
-    <button class="avatar-btn" onclick="handleAuthClick()" id="authBtn" title="Akun"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+    <button class="icon-btn" onclick="toggleSearch()" title="Cari">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </button>
+    <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Tema">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <button class="avatar-btn" onclick="handleAuthClick()" id="authBtn" title="Akun">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </button>
   </div>
 </nav>
+
+<!-- ── SEARCH PANEL ───────────────────────────────────────── -->
 <div class="search-panel hidden" id="searchPanel">
   <div class="search-inner">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -30,44 +57,87 @@
     <button onclick="toggleSearch()">✕</button>
   </div>
 </div>
+
+<!-- ── GLOBAL OVERLAY ─────────────────────────────────────── -->
 <div id="loading" class="loading-screen hidden"><div class="loading-ring"></div></div>
 <div id="toast" class="toast hidden"></div>
+
+<!-- ── SCROLL TO TOP ──────────────────────────────────────── -->
+<button id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" title="Ke atas">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+
+<!-- ── MAIN VIEWS ─────────────────────────────────────────── -->
 <main id="app">
   <div id="home-view"    class="view"></div>
+
   <div id="jadwal-view"  class="view hidden">
     <div class="page-header"><h1 class="page-title">Jadwal Tayang</h1></div>
     <div class="day-strip" id="dayStrip"></div>
     <div id="jadwal-content" class="jadwal-list"></div>
-    <div class="day-nav-row"><button class="day-nav-btn" id="prevDayBtn">← Min</button><button class="day-nav-btn" id="nextDayBtn">Sen →</button></div>
+    <div class="day-nav-row">
+      <button class="day-nav-btn" id="prevDayBtn">← Min</button>
+      <button class="day-nav-btn" id="nextDayBtn">Sen →</button>
+    </div>
   </div>
+
   <div id="riwayat-view" class="view hidden">
-    <div class="page-header"><h1 class="page-title">Riwayat Menonton</h1><p class="page-subtitle">Tap tahan untuk memilih &amp; hapus</p></div>
+    <div class="page-header">
+      <h1 class="page-title">Riwayat Menonton</h1>
+      <p class="page-subtitle">Tap tahan untuk memilih &amp; hapus</p>
+    </div>
     <div id="riwayat-content"></div>
   </div>
+
   <div id="stream-view"  class="view hidden">
     <div class="page-header"><h1 class="page-title">Favorit</h1></div>
     <div id="stream-content"></div>
   </div>
+
   <div id="settings-view" class="view hidden">
     <div class="page-header"><h1 class="page-title">Pengaturan</h1></div>
     <div id="settings-content"></div>
   </div>
+
   <div id="detail-view" class="view hidden">
-    <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Kembali</button>
+    <button class="back-btn" onclick="goBack()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Kembali
+    </button>
     <div id="detail-content"></div>
   </div>
+
   <div id="watch-view" class="view hidden">
-    <button class="back-btn" onclick="backFromWatch()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> List Episode</button>
+    <button class="back-btn" onclick="backFromWatch()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> List Episode
+    </button>
     <div id="watch-content"></div>
   </div>
 </main>
+
+<!-- ── BOTTOM NAV ─────────────────────────────────────────── -->
 <nav class="bottom-nav" id="bottomNav">
-  <button class="nav-item active" onclick="switchTab('home')" id="tab-home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></button>
-  <button class="nav-item" onclick="switchTab('jadwal')" id="tab-jadwal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Jadwal</span></button>
-  <button class="nav-item" onclick="switchTab('riwayat')" id="tab-riwayat"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Riwayat</span></button>
-  <button class="nav-item" onclick="switchTab('stream')" id="tab-stream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78z"/></svg><span>Favorit</span></button>
-  <button class="nav-item" onclick="switchTab('settings')" id="tab-settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button>
+  <button class="nav-item active" onclick="switchTab('home')" id="tab-home">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Home</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('jadwal')" id="tab-jadwal">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>Jadwal</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('riwayat')" id="tab-riwayat">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>Riwayat</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('stream')" id="tab-stream">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78z"/></svg>
+    <span>Favorit</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('settings')" id="tab-settings">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Settings</span>
+  </button>
 </nav>
+
 <script src="app.js"></script>
 </body>
 </html>

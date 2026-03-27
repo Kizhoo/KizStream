@@ -340,11 +340,101 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 /* hero ep badge */
 .hero-ep-badge { display:inline-block;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:4px;margin-bottom:4px; }
 
-/* ── Stream Tabs (Favorit / Semua Anime) ── */
-.stream-tabs { display:flex; gap:4px; padding:12px 16px 0; }
-.stream-tab { flex:1; padding:10px; text-align:center; font-size:13px; font-weight:700; border-radius:var(--radius); background:var(--surface); color:var(--text-muted); transition:all .2s; }
-.stream-tab.active { background:var(--accent); color:#fff; }
-.anime-pagination { display:flex; align-items:center; justify-content:center; padding:12px 16px 20px; gap:8px; }
+/* ═══════════════════════════════════════════════════════════
+   ADDITIONS v12 — Offline bar, PWA, Scroll-top, Skeleton,
+                   Realtime comments, Like btn, Riwayat del
+   ═══════════════════════════════════════════════════════════ */
 
-/* ── Search result header ── */
-.search-result-header { background:var(--bg); position:sticky; top:var(--navbar-h); z-index:50; }
+/* ── OFFLINE BAR ──────────────────────────────────────────── */
+.offline-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2000;
+  background: #ef4444; color: white; text-align: center;
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  transition: transform .3s;
+}
+.offline-bar.hidden { display: none; }
+
+/* ── PWA INSTALL BANNER ───────────────────────────────────── */
+.pwa-banner {
+  position: fixed; bottom: 70px; left: 12px; right: 12px;
+  background: var(--accent); color: white; border-radius: 14px;
+  padding: 12px 16px; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; z-index: 999;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3); font-size: 13px; font-weight: 600;
+}
+.pwa-banner.hidden { display: none; }
+.pwa-install-btn { background: white; color: var(--accent); border: none; padding: 6px 14px; border-radius: 50px; font-weight: 700; font-size: 12px; cursor: pointer; }
+.pwa-dismiss-btn { background: transparent; border: none; color: rgba(255,255,255,.8); font-size: 16px; cursor: pointer; padding: 0 4px; }
+
+/* ── SCROLL TO TOP ────────────────────────────────────────── */
+.scroll-top-btn {
+  position: fixed; bottom: 80px; right: 16px; z-index: 900;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--accent); color: white; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s;
+  transform: translateY(10px);
+}
+.scroll-top-btn.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.scroll-top-btn:hover { background: var(--primary); }
+
+/* ── SKELETON LOADING ─────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-card, .skeleton-img, .skeleton-text {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--bg-card) 50%, var(--surface) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+.skeleton-card.h-card { pointer-events: none; }
+.skeleton-img { width: 120px; min-width: 120px; height: 160px; border-radius: 8px; }
+.skeleton-text { height: 12px; border-radius: 6px; margin-top: 8px; width: 80%; }
+
+/* ── RIWAYAT DELETE BUTTON ────────────────────────────────── */
+.riwayat-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.riwayat-del-btn {
+  background: transparent; border: none; color: var(--text-muted);
+  font-size: 14px; cursor: pointer; padding: 4px 6px; border-radius: 4px;
+  opacity: 0; transition: opacity .2s, color .2s;
+}
+.riwayat-item:hover .riwayat-del-btn { opacity: 1; }
+.riwayat-del-btn:hover { color: #ef4444; }
+
+/* ── COMMENT IMPROVEMENTS ────────────────────────────────── */
+.comment-loading { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.comment-like-btn {
+  background: transparent; border: none; color: var(--text-muted);
+  font-size: 12px; cursor: pointer; padding: 4px 0; margin-top: 4px;
+  font-family: inherit; transition: color .15s;
+}
+.comment-like-btn:hover { color: var(--accent); }
+.comment-tabs { display: flex; gap: 6px; }
+.comment-tab {
+  background: var(--surface); border: 1px solid var(--border-color);
+  color: var(--text-muted); padding: 6px 14px; border-radius: 50px;
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: .15s;
+}
+.comment-tab.active { background: var(--text-main); color: var(--bg-main); border-color: var(--text-main); }
+[data-theme="light"] .comment-tab.active { background: #222; color: white; border-color: #222; }
+.comment-input { resize: none; overflow: hidden; max-height: 120px; }
+
+/* ── LIKE BUTTON ACTIVE STATE ─────────────────────────────── */
+.watch-action-btn.active {
+  background: rgba(59,130,246,.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── ENDED STATUS JADWAL ─────────────────────────────────── */
+.jadwal-status.ended { color: #6b7280; }
+.status-ended { opacity: 0.7; }
+
+/* ── MOBILE TOUCH FEEDBACK ───────────────────────────────── */
+.grid-card:active, .h-card:active, .jadwal-item:active, .riwayat-item:active {
+  transform: scale(0.97);
+  transition: transform .1s;
+}
