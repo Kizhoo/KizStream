@@ -6,9 +6,9 @@
    ============================================================ */
 
 // ── SUPABASE ─────────────────────────────────────────────────
-const SB_URL   = 'https://panhgnyfszfxoaiuavzz.supabase.co';       // https://xxx.supabase.co
-const SB_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhbmhnbnlmc3pmeG9haXVhdnp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTg0MzgsImV4cCI6MjA5MDA5NDQzOH0.NDtyR4VsjbVgPqcYl_CtG20PP-Onm1Qg_DjsTN-Xv3U';  // eyJhbGci...
-const SB_READY = SB_URL !== 'https://panhgnyfszfxoaiuavzz.supabase.co';
+const SB_URL   = 'YOUR_SUPABASE_URL';       // https://xxx.supabase.co
+const SB_KEY   = 'YOUR_SUPABASE_ANON_KEY';  // eyJhbGci...
+const SB_READY = SB_URL !== 'YOUR_SUPABASE_URL' && SB_URL.startsWith('https://');
 let sb = null;
 if (SB_READY && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY);
 
@@ -349,8 +349,14 @@ async function loadHome() {
   c.innerHTML = '<div style="padding:60px 0;text-align:center"><div class="loading-ring" style="margin:auto"></div></div>';
   try {
     // Load 3 pages for more variety
-    const pages = await Promise.all([1,2,3].map(p=>apiFetch(`${API}/latest?page=${p}`).catch(()=>[])));
-    const latest = [...new Map([...pages].flat().filter(Boolean).map(a=>[a.url,a])).values()];
+    // Load page 1 first for instant display, then enrich in background
+    const latest1 = await apiFetch(`${API}/latest?page=1`);
+    const latest = [...new Map((latest1||[]).map(a=>[a.url,a])).values()];
+    // Load more pages in background without blocking
+    Promise.all([2,3].map(p=>apiFetch(`${API}/latest?page=${p}`).catch(()=>[]))).then(pages=>{
+      const more=[...new Map(pages.flat().filter(Boolean).map(a=>[a.url,a])).values()].filter(a=>!latest.find(b=>b.url===a.url));
+      if(more.length>0){ const grid=document.querySelector('.anime-grid-3'); if(grid) grid.insertAdjacentHTML('beforeend', more.slice(0,12).map(a=>gridCard(a,'New')).join('')); }
+    }).catch(()=>{});
     if (!latest.length) { c.innerHTML='<div class="empty-state"><h3>Tidak ada data</h3></div>'; return; }
 
     const top5 = latest.slice(0,5);
@@ -396,7 +402,9 @@ async function loadHome() {
 async function loadGenreSections(container) {
   for (const g of HOME_GENRES) {
     try {
-      const results = await Promise.all(g.q.slice(0,2).map(q=>apiFetch(`${API}/search?q=${encodeURIComponent(q)}`).catch(()=>[])));
+      // Timeout per genre: 8s max so page doesn't hang
+      const withTimeout = p => Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))]);
+      const results = await withTimeout(Promise.all(g.q.slice(0,2).map(q=>apiFetch(`${API}/search?q=${encodeURIComponent(q)}`).catch(()=>[]))));
       const items = [...new Map(results.flat().filter(Boolean).map(a=>[a.url,a])).values()].slice(0,15);
       if (!items.length) continue;
       const sec = document.createElement('div');
@@ -407,7 +415,8 @@ async function loadGenreSections(container) {
             ${a.score?`<div class="h-card-badge">★${a.score}</div>`:''}
           </div><div class="h-card-title">${a.title||''}</div></div>`).join('')}</div>`;
       container.appendChild(sec);
-    } catch(_) {}
+    } catch(e) { console.log(`Genre ${g.label} failed:`, e.message); }
+    await new Promise(r=>setTimeout(r,300));
   }
 }
 
@@ -692,7 +701,9 @@ function renderWatchScreen(data, meta, epUrl) {
   document.getElementById('watch-content').innerHTML = `
     <div class="player-wrap" id="playerWrap">
       ${first
-        ? `<iframe id="videoPlayer" src="${first.url}" allowfullscreen allow="autoplay;fullscreen" scrolling="no" frameborder="0"></iframe>`
+        ? ((/\.(?:mp4|m3u8|webm)([\?#]|$)/i.test(first.url))
+          ? `<video id="videoPlayer" src="${first.url}" controls autoplay playsinline style="width:100%;height:100%;background:#000;display:block"></video>`
+          : `<iframe id="videoPlayer" src="${first.url}" allowfullscreen allow="autoplay;fullscreen;encrypted-media" scrolling="no" frameborder="0"></iframe>`)
         : `<div class="stream-error">
             <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <p>Stream belum tersedia untuk episode ini</p>
@@ -760,8 +771,27 @@ async function loadEpListForWatch(animeUrl, curEpUrl, meta) {
 }
 
 function changeServer(url, btn) {
-  const iframe = document.getElementById('videoPlayer');
-  if (iframe) iframe.src = url;
+  const isDirectUrl = /\.(?:mp4|m3u8|webm)([\?#]|$)/i.test(url||'');
+  const wrap = document.getElementById('playerWrap');
+  const existing = document.getElementById('videoPlayer');
+  const wasVideo = existing && existing.tagName === 'VIDEO';
+  const wasIframe = existing && existing.tagName === 'IFRAME';
+
+  if (isDirectUrl && !wasVideo) {
+    // Switch to video tag
+    const v = document.createElement('video');
+    v.id='videoPlayer'; v.src=url; v.controls=true; v.autoplay=true; v.setAttribute('playsinline','');
+    v.style.cssText='width:100%;height:100%;background:#000;display:block';
+    if (wrap) { wrap.innerHTML=''; wrap.appendChild(v); }
+  } else if (!isDirectUrl && !wasIframe) {
+    // Switch to iframe
+    const ifr = document.createElement('iframe');
+    ifr.id='videoPlayer'; ifr.src=url; ifr.allowFullscreen=true; ifr.scrolling='no'; ifr.frameBorder='0';
+    ifr.allow='autoplay;fullscreen;encrypted-media';
+    if (wrap) { wrap.innerHTML=''; wrap.appendChild(ifr); }
+  } else if (existing) {
+    existing.src = url;
+  }
   document.querySelectorAll('.server-tag').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   showToast('Server diganti');
@@ -818,14 +848,14 @@ function renderSettings() {
   c.innerHTML=`
     ${currentUser
       ?`<div class="user-profile-card"><div class="profile-avatar">${currentUser.user_metadata?.avatar_url?`<img src="${currentUser.user_metadata.avatar_url}" alt="">`:((currentUser.email||'U')[0].toUpperCase())}</div><div><div class="profile-name">${currentUser.user_metadata?.username||currentUser.email?.split('@')[0]||'User'}</div><div class="profile-email">${currentUser.email||''}</div></div><button class="profile-logout-btn" onclick="doLogout()">Logout</button></div>`
-      :`<div class="settings-section" style="margin-top:16px"><button class="login-cta-btn" style="width:calc(100% - 32px);margin:0 16px;justify-content:center;padding:14px;border-radius:12px;display:flex" onclick="handleAuthClick()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>&nbsp;Login / Daftar</button></div>`}
+      :`<div class="settings-section" style="margin-top:16px">${SB_READY?`<button class="login-cta-btn" style="width:calc(100% - 32px);margin:0 16px;justify-content:center;padding:14px;border-radius:12px;display:flex" onclick="handleAuthClick()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>&nbsp;Login / Daftar</button>`:'<div style="padding:0 16px;color:var(--text-muted);font-size:13px">⚙️ Isi SB_URL &amp; SB_KEY di app.js untuk aktifkan login</div>'}</div>`}
     <div class="settings-list">
       <div class="settings-section"><div class="settings-section-title">Tampilan</div>
         <div class="settings-item" onclick="toggleTheme();renderSettings()"><div class="settings-item-left"><div class="settings-item-icon">🌙</div><div><div class="settings-item-title">Mode Gelap</div></div></div><div class="toggle-switch ${!isLight?'on':''}"></div></div>
       </div>
       <div class="settings-section" style="margin-top:12px"><div class="settings-section-title">Tentang</div>
         <div class="settings-item"><div class="settings-item-left"><div class="settings-item-icon">⚡</div><div><div class="settings-item-title">NimeStream v11</div><div class="settings-item-sub">Powered by Samehadaku &amp; AniList</div></div></div></div>
-        <div class="settings-item"><div class="settings-item-left"><div class="settings-item-icon">🛢️</div><div><div class="settings-item-title">Supabase</div><div class="settings-item-sub">${SB_READY?'✅ Terhubung':'⚠️ Belum dikonfigurasi — isi SB_URL &amp; SB_KEY di app.js'}</div></div></div></div>
+
         <div class="settings-item"><div class="settings-item-left"><div class="settings-item-icon">🤖</div><div><div class="settings-item-title">Bot Telegram</div><div class="settings-item-sub">Daftar akun via @NimeStreamBot</div></div></div><a href="https://t.me/NimeStreamBot" target="_blank" class="see-all-btn" style="padding:0 12px">Buka ›</a></div>
       </div>
       <div class="settings-section" style="margin-top:12px"><div class="settings-section-title">Data</div>
