@@ -6,9 +6,9 @@
    ============================================================ */
 
 // ── SUPABASE ─────────────────────────────────────────────────
-const SB_URL   = 'https://panhgnyfszfxoaiuavzz.supabase.co';       // https://xxx.supabase.co
-const SB_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhbmhnbnlmc3pmeG9haXVhdnp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTg0MzgsImV4cCI6MjA5MDA5NDQzOH0.NDtyR4VsjbVgPqcYl_CtG20PP-Onm1Qg_DjsTN-Xv3U';  // eyJhbGci...
-const SB_READY = SB_URL !== 'https://panhgnyfszfxoaiuavzz.supabase.co' && SB_URL.startsWith('https://');
+const SB_URL   = 'YOUR_SUPABASE_URL';       // https://xxx.supabase.co
+const SB_KEY   = 'YOUR_SUPABASE_ANON_KEY';  // eyJhbGci...
+const SB_READY = SB_URL !== 'YOUR_SUPABASE_URL' && SB_URL.startsWith('https://');
 let sb = null;
 if (SB_READY && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY);
 
@@ -241,8 +241,14 @@ async function doSearch() {
     hideAllViews();
     document.getElementById('home-view').classList.remove('hidden');
     document.getElementById('bottomNav').classList.remove('hidden');
+    document.getElementById('home-view').dataset.mode = 'search';
     document.getElementById('home-view').innerHTML =
-      `<div class="section-header"><h2 class="section-title">Hasil: "${q}"</h2></div>`+
+      `<div class="search-result-header">
+        <button class="back-btn" onclick="goBack()" style="padding:12px 16px 4px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Kembali
+        </button>
+        <div class="section-header" style="padding-top:4px"><h2 class="section-title">Hasil: "${q}"</h2><span style="color:var(--text-muted);font-size:13px">${(data||[]).length} anime</span></div>
+      </div>`+
       `<div class="anime-grid-3">${(data||[]).map(a=>gridCard(a)).join('')}</div>`;
   } catch(e) { showToast('Gagal mencari: '+e.message); }
   finally { loader(false); }
@@ -288,7 +294,11 @@ function switchTab(tab) {
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById(`tab-${tab}`)?.classList.add('active');
   switch(tab) {
-    case 'home':     showView('home-view');     if (!document.getElementById('home-view').innerHTML.trim()) loadHome(); break;
+    case 'home':     showView('home-view');     
+      const hv = document.getElementById('home-view');
+      // If showing home-view with search results, reload home properly
+      if (!hv.innerHTML.trim() || hv.dataset.mode === 'search') { hv.dataset.mode='home'; loadHome(); }
+      break;
     case 'jadwal':   showView('jadwal-view');   loadJadwal();    break;
     case 'riwayat':  showView('riwayat-view');  loadRiwayat();   break;
     case 'stream':   showView('stream-view');   loadFavorites(); break;
@@ -296,8 +306,13 @@ function switchTab(tab) {
   }
 }
 function goBack() {
-  if (navHistory.length) { const p = navHistory.pop(); if (p==='detail'){showView('detail-view');}else switchTab(p); }
-  else switchTab('home');
+  if (navHistory.length) {
+    const p = navHistory.pop();
+    if (p === 'detail') { showView('detail-view'); }
+    else if (p === 'search') { switchTab('home'); }
+    else if (p === 'watch') { /* already handled */ switchTab('home'); }
+    else { switchTab(p); }
+  } else { switchTab('home'); }
 }
 function backFromWatch() {
   clearInterval(watchTimer); watchTimer=null;
@@ -334,14 +349,14 @@ function hCard(h) {
 
 // ── HOME ──────────────────────────────────────────────────────
 const HOME_GENRES = [
-  { label:'⚔️ Action',     q:['action','bleach','jujutsu','kimetsu','shingeki'] },
-  { label:'💕 Romance',    q:['romance','love','kanojo','ore no imoto'] },
-  { label:'🌀 Isekai',     q:['isekai','tensei','reincarnation','slime','shield hero'] },
-  { label:'😂 Comedy',     q:['comedy','slice of life','bocchi','konosuba'] },
-  { label:'✨ Fantasy',    q:['fantasy','magic','mahou','dragon','dungeon'] },
-  { label:'🏫 School',     q:['school','gakuen','classroom','high school'] },
-  { label:'🤖 Sci-Fi',     q:['sci-fi','mecha','gundam','eva','attack'] },
-  { label:'🥊 Olahraga',   q:['sports','haikyuu','blue lock','baseball','kuroko'] },
+  { label:'⚔️ Action',     q:['action','bleach','jujutsu','kimetsu'] },
+  { label:'💕 Romance',    q:['romance','love','kanojo'] },
+  { label:'🌀 Isekai',     q:['isekai','tensei','slime'] },
+  { label:'😂 Comedy',     q:['comedy','bocchi','konosuba'] },
+  { label:'✨ Fantasy',    q:['fantasy','magic','dragon'] },
+  { label:'🏫 School',     q:['school','gakuen','classroom'] },
+  { label:'🤖 Sci-Fi',     q:['sci-fi','mecha','gundam'] },
+  { label:'🥊 Olahraga',   q:['haikyuu','blue lock','sports'] },
 ];
 
 async function loadHome() {
@@ -428,7 +443,15 @@ async function doSearch2(q) {
     hideAllViews();
     document.getElementById('home-view').classList.remove('hidden');
     document.getElementById('bottomNav').classList.remove('hidden');
-    document.getElementById('home-view').innerHTML=`<div class="section-header"><h2 class="section-title">Genre: ${q}</h2></div><div class="anime-grid-3">${(data||[]).map(a=>gridCard(a)).join('')}</div>`;
+    document.getElementById('home-view').dataset.mode = 'search';
+    document.getElementById('home-view').innerHTML=
+      `<div class="search-result-header">
+        <button class="back-btn" onclick="goBack()" style="padding:12px 16px 4px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Kembali
+        </button>
+        <div class="section-header" style="padding-top:4px"><h2 class="section-title">Genre: ${q}</h2><span style="color:var(--text-muted);font-size:13px">${(data||[]).length} anime</span></div>
+      </div>
+      <div class="anime-grid-3">${(data||[]).map(a=>gridCard(a)).join('')}</div>`;
   } catch(e){ showToast(e.message); } finally { loader(false); }
 }
 
@@ -542,11 +565,45 @@ function exitMulti() { multiSelect=false;selectedRiw.clear();loadRiwayat(); }
 async function deleteSelected() { for(const u of selectedRiw) await deleteHistory(u); multiSelect=false;selectedRiw.clear();showToast('Riwayat dihapus');loadRiwayat(); }
 
 // ── FAVORITES ─────────────────────────────────────────────────
+let _animeListPage = 1;
+let _animeListMode = 'fav'; // 'fav' | 'all'
+
 async function loadFavorites() {
   const c = document.getElementById('stream-content');
-  const favs = await getAllFavs();
-  if (!favs.length) { c.innerHTML='<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78z"/></svg><h3>Belum ada favorit</h3><p>Tap ♡ di halaman detail untuk menyimpan</p></div>'; return; }
-  c.innerHTML=`<div class="anime-grid-3" style="padding:16px">${favs.map(a=>`<div class="grid-card" onclick="loadDetail('${a.url}')"><div class="grid-card-img"><img src="${a.image||''}" alt="" loading="lazy" onerror="this.style.opacity=0">${a.score?`<div class="grid-score">★ ${a.score}</div>`:''}</div><div class="grid-card-title">${a.title||''}</div></div>`).join('')}</div>`;
+  c.innerHTML = `
+    <div class="stream-tabs">
+      <button class="stream-tab ${_animeListMode==='fav'?'active':''}" onclick="switchStreamTab('fav')">❤️ Favorit</button>
+      <button class="stream-tab ${_animeListMode==='all'?'active':''}" onclick="switchStreamTab('all')">📋 Semua Anime</button>
+    </div>
+    <div id="streamTabContent"></div>`;
+  renderStreamTab();
+}
+function switchStreamTab(mode) {
+  _animeListMode = mode; _animeListPage = 1;
+  document.querySelectorAll('.stream-tab').forEach((b,i)=>b.classList.toggle('active',(mode==='fav'&&i===0)||(mode==='all'&&i===1)));
+  renderStreamTab();
+}
+async function renderStreamTab() {
+  const c = document.getElementById('streamTabContent'); if (!c) return;
+  if (_animeListMode === 'fav') {
+    const favs = await getAllFavs();
+    if (!favs.length) { c.innerHTML='<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78z"/></svg><h3>Belum ada favorit</h3><p>Tap ♡ di halaman detail untuk menyimpan</p></div>'; return; }
+    c.innerHTML=`<div class="anime-grid-3" style="padding:16px">${favs.map(a=>`<div class="grid-card" onclick="loadDetail('${a.url}')"><div class="grid-card-img"><img src="${a.image||''}" alt="" loading="lazy" onerror="this.style.opacity=0">${a.score?`<div class="grid-score">★ ${a.score}</div>`:''}</div><div class="grid-card-title">${a.title||''}</div></div>`).join('')}</div>`;
+  } else {
+    c.innerHTML='<div style="padding:30px 0;text-align:center"><div class="loading-ring" style="margin:auto"></div></div>';
+    try {
+      const { data, page, totalPages } = await apiFetch(`${API}/animelist?page=${_animeListPage}`);
+      if (!data?.length) { c.innerHTML='<div class="empty-state"><h3>Tidak ada data</h3></div>'; return; }
+      c.innerHTML=`
+        <div style="padding:8px 16px;color:var(--text-muted);font-size:12px">Halaman ${page} dari ${totalPages}</div>
+        <div class="anime-grid-3" style="padding:0 16px 16px">${data.map(a=>`<div class="grid-card" onclick="loadDetail('${a.url}')"><div class="grid-card-img"><img src="${a.image||''}" alt="" loading="lazy" onerror="this.style.opacity=0">${a.score?`<div class="grid-score">★ ${a.score}</div>`:''}</div><div class="grid-card-title">${a.title||''}</div></div>`).join('')}</div>
+        <div class="anime-pagination">
+          ${_animeListPage>1?`<button class="day-nav-btn" onclick="_animeListPage--;renderStreamTab()">← Prev</button>`:''}
+          <span style="padding:0 12px;font-size:13px;color:var(--text-muted)">${page}/${totalPages}</span>
+          ${page<totalPages?`<button class="day-nav-btn" onclick="_animeListPage++;renderStreamTab()">Next →</button>`:''}
+        </div>`;
+    } catch(e) { c.innerHTML=`<div class="empty-state"><h3>Gagal memuat</h3><p>${e.message}</p></div>`; }
+  }
 }
 
 // ── DETAIL ────────────────────────────────────────────────────
@@ -657,9 +714,9 @@ async function loadWatch(epUrl, metaObj) {
   hideAllViews();
   document.getElementById('watch-view').classList.remove('hidden');
   document.getElementById('bottomNav').classList.add('hidden');
-  document.getElementById('watch-content').innerHTML='<div style="padding:60px 0;text-align:center"><div class="loading-ring" style="margin:auto"></div></div>';
+  document.getElementById('watch-content').innerHTML='<div style="padding:60px 0;text-align:center"><div class="loading-ring" style="margin:auto"></div><p style="color:var(--text-muted);font-size:13px;margin-top:12px">Memuat stream...</p></div>';
   clearInterval(watchTimer);
-  loader(true);
+  // Don't use global loader overlay for watch - it covers the watch view
 
   // Save history entry immediately (with safe defaults)
   const histEntry = {
@@ -689,7 +746,7 @@ async function loadWatch(epUrl, metaObj) {
         <button class="detail-action-btn btn-primary" style="flex:0;padding:10px 22px" onclick="loadWatch(window._META['${mk}'].url,window._META['${mk}'])">🔄 Coba Lagi</button>
         <button class="detail-action-btn btn-secondary" style="flex:0;padding:10px 22px" onclick="backFromWatch()">← Kembali</button>
       </div></div>`;
-  } finally { loader(false); }
+  }
 }
 
 function renderWatchScreen(data, meta, epUrl) {
@@ -703,7 +760,13 @@ function renderWatchScreen(data, meta, epUrl) {
       ${first
         ? ((/\.(?:mp4|m3u8|webm)([\?#]|$)/i.test(first.url))
           ? `<video id="videoPlayer" src="${first.url}" controls autoplay playsinline style="width:100%;height:100%;background:#000;display:block"></video>`
-          : `<iframe id="videoPlayer" src="${first.url}" allowfullscreen allow="autoplay;fullscreen;encrypted-media" scrolling="no" frameborder="0"></iframe>`)
+          : `<div style="position:relative;width:100%;height:100%;background:#000">
+              <div id="iframeLoader" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;pointer-events:none">
+                <div class="loading-ring"></div>
+                <span style="color:#aaa;font-size:12px">Memuat player...</span>
+              </div>
+              <iframe id="videoPlayer" src="${first.url}" allowfullscreen allow="autoplay;fullscreen;encrypted-media;picture-in-picture" scrolling="no" frameborder="0" style="width:100%;height:100%;display:block" onload="const l=document.getElementById('iframeLoader');if(l)l.style.display='none'"></iframe>
+            </div>`)
         : `<div class="stream-error">
             <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <p>Stream belum tersedia untuk episode ini</p>
@@ -848,7 +911,7 @@ function renderSettings() {
   c.innerHTML=`
     ${currentUser
       ?`<div class="user-profile-card"><div class="profile-avatar">${currentUser.user_metadata?.avatar_url?`<img src="${currentUser.user_metadata.avatar_url}" alt="">`:((currentUser.email||'U')[0].toUpperCase())}</div><div><div class="profile-name">${currentUser.user_metadata?.username||currentUser.email?.split('@')[0]||'User'}</div><div class="profile-email">${currentUser.email||''}</div></div><button class="profile-logout-btn" onclick="doLogout()">Logout</button></div>`
-      :`<div class="settings-section" style="margin-top:16px">${SB_READY?`<button class="login-cta-btn" style="width:calc(100% - 32px);margin:0 16px;justify-content:center;padding:14px;border-radius:12px;display:flex" onclick="handleAuthClick()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>&nbsp;Login / Daftar</button>`:'<div style="padding:0 16px;color:var(--text-muted);font-size:13px">⚙️ Isi SB_URL &amp; SB_KEY di app.js untuk aktifkan login</div>'}</div>`}
+      :`<div class="settings-section" style="margin-top:16px"><button class="login-cta-btn" style="width:calc(100% - 32px);margin:0 16px;justify-content:center;padding:14px;border-radius:12px;display:flex" onclick="handleAuthClick()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>&nbsp;Login / Daftar</button></div>`}
     <div class="settings-list">
       <div class="settings-section"><div class="settings-section-title">Tampilan</div>
         <div class="settings-item" onclick="toggleTheme();renderSettings()"><div class="settings-item-left"><div class="settings-item-icon">🌙</div><div><div class="settings-item-title">Mode Gelap</div></div></div><div class="toggle-switch ${!isLight?'on':''}"></div></div>
