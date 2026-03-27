@@ -6,9 +6,9 @@
    ============================================================ */
 
 // ── SUPABASE ─────────────────────────────────────────────────
-const SB_URL   = 'YOUR_SUPABASE_URL';       // https://xxx.supabase.co
-const SB_KEY   = 'YOUR_SUPABASE_ANON_KEY';  // eyJhbGci...
-const SB_READY = SB_URL !== 'YOUR_SUPABASE_URL' && SB_URL.startsWith('https://');
+const SB_URL   = 'https://panhgnyfszfxoaiuavzz.supabase.co';       // https://xxx.supabase.co
+const SB_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhbmhnbnlmc3pmeG9haXVhdnp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTg0MzgsImV4cCI6MjA5MDA5NDQzOH0.NDtyR4VsjbVgPqcYl_CtG20PP-Onm1Qg_DjsTN-Xv3U';  // eyJhbGci...
+const SB_READY = SB_URL !== 'https://panhgnyfszfxoaiuavzz.supabase.co' && SB_URL.startsWith('https://');
 let sb = null;
 if (SB_READY && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY);
 
