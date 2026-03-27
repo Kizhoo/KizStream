@@ -290,3 +290,55 @@ app.get('/api/debug', async (req,res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`NimeStream API running on :${PORT}`));
 module.exports = app;
+
+// ── ALL ANIME LIST (paginated scraping of daftar-anime) ──────
+async function animelist(page = 1, letter = '') {
+  // Samehadaku has /daftar-anime/ with full alphabetical list
+  let url;
+  if (letter) {
+    url = `${BASE_URL}/daftar-anime/?title=${encodeURIComponent(letter)}&status=&type=&order=title`;
+  } else {
+    url = `${BASE_URL}/daftar-anime/page/${page}/?status=&type=&order=update`;
+  }
+  const res = await fetchWithFallback(url);
+  const $ = cheerio.load(res.data);
+  const data = [];
+
+  // Primary selector for anime list page
+  const selectors = [
+    '.animposterfull', '.animpost', '.listupd .bs', 
+    '.soralist li', '.anime-list li', '.listupd article'
+  ];
+  
+  let found = false;
+  for (const sel of selectors) {
+    const els = $(sel);
+    if (!els.length) continue;
+    found = true;
+    els.each((_, e) => {
+      const a = $(e).find('a').first();
+      const url = a.attr('href');
+      if (!url) return;
+      const title = $(e).find('.tt, h2, .title, .data h3').first().text().trim() || a.attr('title') || '';
+      const image = $(e).find('img').attr('src') || $(e).find('img').attr('data-src') || '';
+      const score = $(e).find('.rating, .score, .num').text().trim();
+      const type  = $(e).find('.typez, .type').text().trim();
+      const status= $(e).find('.status').text().trim();
+      if (title) data.push({ title, url, image, score, type, status });
+    });
+    break;
+  }
+
+  // Get total pages
+  let totalPages = 1;
+  const lastPageEl = $('a.last, .pagination a:last-child, .nav-links a:last-child').attr('href') || '';
+  const pageMatch = lastPageEl.match(/page\/(\d+)/);
+  if (pageMatch) totalPages = parseInt(pageMatch[1]);
+
+  return { data, page: parseInt(page), totalPages, total: data.length };
+}
+
+app.get('/api/animelist', async (req, res) => {
+  try { res.json(await animelist(req.query.page || 1, req.query.letter || '')); }
+  catch (e) { console.error(e.message); res.status(500).json({ error: e.message }); }
+});
